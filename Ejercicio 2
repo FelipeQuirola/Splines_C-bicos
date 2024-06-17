@@ -1,0 +1,83 @@
+import sympy as sym
+from IPython.display import display
+
+def cubic_spline_clamped(xs: list[float], ys: list[float], fpa: float, fpb: float) -> list[sym.Symbol]:
+    """
+    Cubic spline interpolation ``S`` with clamped boundary conditions. Every two points are interpolated by a cubic polynomial
+    S_j(x) = a_j + b_j(x - x_j) + c_j(x - x_j)^2 + d_j(x - x_j)^3.
+
+    xs must be different but not necessarily ordered nor equally spaced.
+
+    Parameters
+    ----------
+    xs : list[float]
+        Points to be interpolated (x-coordinates).
+    ys : list[float]
+        Points to be interpolated (y-coordinates).
+    fpa : float
+        Derivative of the function at the first point (clamped boundary condition).
+    fpb : float
+        Derivative of the function at the last point (clamped boundary condition).
+
+    Returns
+    -------
+    list[sym.Symbol]
+        List of symbolic expressions for the cubic spline interpolation.
+    """
+
+    points = sorted(zip(xs, ys), key=lambda x: x[0])  # sort points by x
+
+    xs = [x for x, _ in points]
+    ys = [y for _, y in points]
+
+    n = len(points) - 1  # number of splines
+
+    h = [xs[i + 1] - xs[i] for i in range(n)]  # distances between contiguous xs
+
+    alpha = [0] * (n + 1)
+    alpha[0] = 3 * (ys[1] - ys[0]) / h[0] - 3 * fpa
+    alpha[n] = 3 * fpb - 3 * (ys[n] - ys[n-1]) / h[n-1]
+
+    for i in range(1, n):
+        alpha[i] = 3 / h[i] * (ys[i + 1] - ys[i]) - 3 / h[i - 1] * (ys[i] - ys[i - 1])
+
+    l = [1] + [0] * n
+    u = [0] * (n + 1)
+    z = [0] * (n + 1)
+
+    for i in range(1, n):
+        l[i] = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * u[i - 1]
+        u[i] = h[i] / l[i]
+        z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i]
+
+    l[n] = 1
+    z[0] = alpha[0] / l[0]
+    z[n] = alpha[n] / l[n]
+    c = [0] * (n + 1)
+
+    x = sym.Symbol("x")
+    splines = []
+    for j in range(n - 1, -1, -1):
+        c[j] = z[j] - u[j] * c[j + 1]
+        b = (ys[j + 1] - ys[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3
+        d = (c[j + 1] - c[j]) / (3 * h[j])
+        a = ys[j]
+        print(j, a, b, c[j], d)
+        S = a + b * (x - xs[j]) + c[j] * (x - xs[j])**2 + d * (x - xs[j])**3
+
+        splines.append(S)
+    splines.reverse()
+    return splines
+
+# Puntos dados
+xs = [-1, 1]
+ys = [1, 3]
+fpa = 1  # Derivada en el primer punto
+fpb = 2  # Derivada en el último punto
+
+# Calcular el spline cúbico
+splines = cubic_spline_clamped(xs, ys, fpa, fpb)
+
+# Mostrar los polinomios resultantes
+for spline in splines:
+    display(spline)
