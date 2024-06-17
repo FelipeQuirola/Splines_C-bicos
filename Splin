@@ -1,0 +1,68 @@
+import sympy as sym
+
+def cubic_spline(xs: list[float], ys: list[float]) -> list[sym.Symbol]:
+    """
+    Cubic spline interpolation ``S``. Every two points are interpolated by a cubic polynomial
+    S_j(x) = a_j + b_j(x - x_j) + c_j(x - x_j)^2 + d_j(x - x_j)^3.
+
+    xs must be different but not necessarily ordered nor equally spaced.
+
+    Parameters
+    ----------
+    xs : list[float]
+        Points to be interpolated (x-coordinates).
+    ys : list[float]
+        Points to be interpolated (y-coordinates).
+
+    Returns
+    -------
+    list[sym.Symbol]
+        List of symbolic expressions for the cubic spline interpolation.
+    """
+
+    points = sorted(zip(xs, ys), key=lambda x: x[0])  # sort points by x
+
+    xs = [x for x, _ in points]
+    ys = [y for _, y in points]
+
+    n = len(points) - 1  # number of splines
+
+    h = [xs[i + 1] - xs[i] for i in range(n)]  # distances between contiguous xs
+
+    alpha = [0] * (n + 1)
+    for i in range(1, n):
+        alpha[i] = 3 / h[i] * (ys[i + 1] - ys[i]) - 3 / h[i - 1] * (ys[i] - ys[i - 1])
+
+    l = [1] + [0] * n
+    u = [0] * (n + 1)
+    z = [0] * (n + 1)
+
+    for i in range(1, n):
+        l[i] = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * u[i - 1]
+        u[i] = h[i] / l[i]
+        z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i]
+
+    l[n] = 1
+    z[n] = 0
+    c = [0] * (n + 1)
+
+    x = sym.Symbol("x")
+    splines = []
+    for j in range(n - 1, -1, -1):
+        c[j] = z[j] - u[j] * c[j + 1]
+        b = (ys[j + 1] - ys[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3
+        d = (c[j + 1] - c[j]) / (3 * h[j])
+        a = ys[j]
+        print(j, a, b, c[j], d)
+        S = a + b * (x - xs[j]) + c[j] * (x - xs[j])**2 + d * (x - xs[j])**3
+
+        splines.append(S)
+    splines.reverse()
+    return splines
+"""
+xs = [0, 1, 2]
+ys = [1, 5, 3]
+splines = cubic_spline(xs, ys)
+for spline in splines:
+    display(spline)
+"""
