@@ -1,0 +1,7 @@
+xs = [0, 1, 2]
+ys = [1, 5, 3]
+
+splines = cubic_spline(xs=xs, ys=ys)
+_ = [display(s) for s in splines]
+print("______")
+_ = [display(s.expand()) for s in splines]
